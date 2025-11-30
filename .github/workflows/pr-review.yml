@@ -1,0 +1,70 @@
+name: PR Code Review
+on:
+  pull_request:
+    types: [opened, synchronize]
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Check for console.log
+        run: |
+          if grep -r "console.log" . --exclude-dir=.git; then
+            echo "⚠️ Found console.log statements"
+            echo "::warning::Remove console.log before merging!"
+          fi
+      
+      - name: Check for TODO comments
+        run: |
+          if grep -r "TODO" . --exclude-dir=.git; then
+            echo "⚠️ Found TODO comments"
+            echo "::warning::Address TODO comments before merging"
+          fi
+      
+      - name: Check file size
+        run: |
+          for file in $(find . -name "*.js" -not -path "./.git/*"); do
+            lines=$(wc -l < "$file")
+            if [ $lines -gt 200 ]; then
+              echo "::warning file=$file::File is $lines lines. Consider splitting into smaller functions."
+            fi
+          done
+      
+      - name: Post review summary
+        uses: actions/github-script@v6
+        if: always()
+        with:
+          script: |
+            const fs = require('fs');
+            const summary = [];
+            
+            // Check for console.log
+            const files = fs.readdirSync('.', { recursive: true });
+            let hasConsoleLog = false;
+            for (const file of files) {
+              if (file.endsWith('.js') && !file.includes('.git')) {
+                const content = fs.readFileSync(file, 'utf8');
+                if (content.includes('console.log')) {
+                  hasConsoleLog = true;
+                  break;
+                }
+              }
+            }
+            
+            if (hasConsoleLog) {
+              summary.push('⚠️ **Code Quality Issues Found:**');
+              summary.push('- Remove console.log statements');
+              summary.push('- Add proper error handling');
+            } else {
+              summary.push('✅ **Code looks good!**');
+              summary.push('- No console.log found');
+              summary.push('- Ready for review!');
+            }
+            
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: summary.join('\n')
+            })
