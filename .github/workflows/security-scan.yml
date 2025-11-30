@@ -10,17 +10,17 @@ jobs:
         run: |
           echo "🔍 Scanning for secrets..."
           
-          if grep -r "PASSWORD.*=.*"" . --exclude-dir=.git; then
+          if grep -R --exclude-dir=.git -nE 'PASSWORD\s*=' .; then
             echo "⚠️ FOUND PASSWORD in code!"
             exit 1
           fi
           
-          if grep -r "API_KEY.*=.*"sk_" . --exclude-dir=.git; then
+          if grep -R --exclude-dir=.git -nE 'API_KEY\s*=' . || grep -R --exclude-dir=.git -nE 'sk_[A-Za-z0-9_-]{8,}' .; then
             echo "⚠️ FOUND API KEY in code!"
             exit 1
           fi
           
-          if grep -r "mongodb://.*:.*@" . --exclude-dir=.git; then
+          if grep -R --exclude-dir=.git -nE 'mongodb://[^:]+:[^@]+@' .; then
             echo "⚠️ FOUND DATABASE CREDENTIALS in code!"
             exit 1
           fi
@@ -30,7 +30,7 @@ jobs:
       - name: Send email alert
         if: failure()
         uses: dawidd6/action-send-mail@v3
-  with:
+        with:
           server_address: smtp.gmail.com
           server_port: 465
           username: ${{ secrets.EMAIL_USERNAME }}
@@ -38,4 +38,4 @@ jobs:
           subject: "🚨 SECURITY ALERT: Secrets found in code!"
           body: "Your code contains sensitive data! Check the Actions tab for details."
           to: ljones57@u.rochester.edu
-          from: GitHub Security Bot
+          from: "GitHub Security Bot"
