@@ -1,0 +1,41 @@
+name: Security Scanner
+on: [push]
+jobs:
+  scan-secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Scan for secrets
+        run: |
+          echo "🔍 Scanning for secrets..."
+          
+          if grep -r "PASSWORD.*=.*"" . --exclude-dir=.git; then
+            echo "⚠️ FOUND PASSWORD in code!"
+            exit 1
+          fi
+          
+          if grep -r "API_KEY.*=.*"sk_" . --exclude-dir=.git; then
+            echo "⚠️ FOUND API KEY in code!"
+            exit 1
+          fi
+          
+          if grep -r "mongodb://.*:.*@" . --exclude-dir=.git; then
+            echo "⚠️ FOUND DATABASE CREDENTIALS in code!"
+            exit 1
+          fi
+          
+          echo "✅ No secrets found!"
+      
+      - name: Send email alert
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+  with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: "🚨 SECURITY ALERT: Secrets found in code!"
+          body: "Your code contains sensitive data! Check the Actions tab for details."
+          to: ljones57@u.rochester.edu
+          from: GitHub Security Bot
