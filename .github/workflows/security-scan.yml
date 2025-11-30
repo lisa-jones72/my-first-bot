@@ -37,5 +37,5 @@ jobs:
           password: ${{ secrets.EMAIL_PASSWORD }}
           subject: "🚨 SECURITY ALERT: Secrets found in code!"
           body: "Your code contains sensitive data! Check the Actions tab for details."
-          to: ljones57@u.rochester.edu
+          to: kevinchimhanda@gmail.com
           from: "GitHub Security Bot"
